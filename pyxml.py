@@ -16,7 +16,7 @@ class Statute:
     language = None
     documentReferences = None
     enactingClause = None
-    chapters = None
+    chapters = []
     runningSections = None
     sections = []
     referenceParts = None
@@ -88,6 +88,7 @@ class Statute:
                 newChapter.identifier = identifier.text
             for heading in chapter.iter(tags.get("heading")):
                 newChapter.heading = heading.text
+            
             self.chapters.append(newChapter)
             
     def defineSections(self):
@@ -102,37 +103,129 @@ class Statute:
             for sectionHeading in section.iter(tags.get("heading")):
                 newSection.heading = sectionHeading.text
             newSection.iterableXml = section
+            newSection.subsections = self.defineSubsections(aSection = newSection)
             self.sections.append(newSection)
     
     def defineSubsections(self, aSection):
         secTags = sectionTags()
         subTags = subsectionTags()
-        tree = ET.parse(self.path)
-        root = tree.getroot()
-        for section in tree.iter(secTags.get("section")):
+        paraTags = paragraphTags()
+        sectionXML = aSection.iterableXml
+        subsectionsLst = []
+        position = 1
+        for section in sectionXML.iter(secTags.get("section")):
+            for element in section:
+                print(element.tag)
+                if (element.tag == subTags.get("text")):
+                    newSubsection = Subsection()
+                    newSubsection.text = element.text
+                    newSubsection.position = position
+                    subsectionsLst.append(newSubsection)
+                    position += 1
+
+                elif (element.tag == paraTags.get("paragraphs")):
+                    newSubsection = Subsection()
+                    newSubsection.paragraphs = self.defineParagraphs(element)
+                    newSubsection.position = position
+                    subsectionsLst.append(newSubsection)
+                    position += 1
+        return subsectionsLst
+            
+            
+
+        '''
+        for section in sectionXML.iter(secTags.get("section")):
             for iden in section.iter(secTags.get("identifier")):
                 for head in section.iter(secTags.get("heading")):
                     #If it looks like a duck and walks like a duck...
                     if (iden.text == aSection.identifier and head.text == aSection.heading):
                         position = 1
-                        for subSection in section.iter(subTags.get("text")):
-                            newSubsection = Subsection()
-                            newSubsection.position = position
-                            newSubsection.text = subSection.text
+                        #Hmmm
+                        paraPosition = 0
+                        inParagraph = False
+                        for element in section.iter():
+
+                            if (element.tag == subTags.get("text")):
+
+                                if (inParagraph == True):
+                                    aSection.position = position
+                                    aSection.subsections.append(newSubsection)
+                                    position += 1
+                                    inParagraph = False
+
+                                newSubsection = Subsection()
+                                print("Creating a new subsec")
+                                newSubsection.position = position
+                                newSubsection.text = element.text
+                                aSection.subsections.append(newSubsection)
+                                position += 1
+
+                            elif (element.tag == paraTags.get("paragraphs")):
+                                inParagraph = True
+                                newSubsection = Subsection()
+                            
+                            elif (element.tag == paraTags.get("paragraphPreamble" and inParagraph == True)):
+                                paraPosition = 0
+                                newParagraph = Paragraph()
+                                newParagraph.position = paraPosition
+                                newParagraph.preamble = element.text
+                                newParagraph.isPreamble = True
+                                newSubsection.paragraphs.append(newParagraph)
+
+                            elif (element.tag == paraTags.get("text") and inParagraph == True):
+                                paraPosition += 1
+                                newParagraph = Paragraph()
+                                newParagraph.position = paraPosition
+                                newParagraph.isPreamble = False
+                                newParagraph.text = element.text
+                                newSubsection.paragraphs.append(newParagraph)
+
+                        if (inParagraph == True):
+                            aSection.position = position
                             aSection.subsections.append(newSubsection)
-                            position += 1
+
                     else:
                         continue
+        '''
 
-    def defineParagraphs(self, aSubsection):
-        subTags = subsectionTags()
+    def hasParagraphs(self, iterableSection):
+        tags = self.getSectionXMLElements(iterableSection)
+        for tag in tags:
+            if ("MomenttiKohtaKooste" in str(tag)):
+                return True
+        return False
+
+    #remove?
+    def getSectionXMLElements(self, iterableSection):
+        elements = []
+        for element in iterableSection.iter():
+            elements.append(element.tag)
+        return elements
+
+    def defineParagraphs(self, paraRoot):
         paraTags = paragraphTags()
-        tree = ET.parse(self.path)
-        root = tree.getroot()
-        for subsection in tree.iter(subTags.get(""))
-        #TODO
+        paraRoot = paraRoot
+        position = 1
+        paragraphLst = []
+        for element in paraRoot.iter():
+            if (element.tag == paraTags.get("paragraphPreamble")):
+                newParagraph = Paragraph()
+                newParagraph.isPreamble = True
+                newParagraph.preamble = element.text
+                newParagraph.position = position-1
+                paragraphLst.append(newParagraph)
 
+            if (element.tag == paraTags.get("text")):
+                newParagraph = Paragraph()
+                newParagraph.isPreamble = False
+                newParagraph.text = element.text
+                newParagraph.position = position
+                paragraphLst.append(newParagraph)
+                position += 1
 
+        return paragraphLst
+                         
+                         
     def initStatute(self):
         self.defineNumber()
         self.defineYear()       
@@ -143,16 +236,27 @@ class Statute:
         self.defineEnactingClause()
         self.defineChapters()
         self.defineSections()
-
-        for section in self.sections:
-            self.defineSubsections(aSection = section)
-            for subsection in section.subsections:
-                self.define.paragraphs(aSubsection = subsection)
-
-        
+            #for subsection in section.subsections:
+                #self.defineParagraphs(aSubsection = subsection)
 
         #TODO
     
+#--------------------------------------------TESTING------------------------------------------------
+
+
+
+    def printSectionTags(self, aSection):
+        secTags = sectionTags()
+        subTags = subsectionTags()
+        paraTags = paragraphTags()
+        sectionXML = aSection.iterableXml
+        print("-----------------------------------------------------------------")
+        print("ID: " + self.statuteID)
+        for section in sectionXML.iter(secTags.get("section")):
+            for element in section:
+                print(element.tag)
+        print("-----------------------------------------------------------------")
+
     def printProperties(self):
         print("ID: " + self.statuteID + "\n")
         print("Dokumentin tyyppi: " + self.documentType + "\n")
@@ -162,6 +266,58 @@ class Statute:
         print("Johtolause: ")
         for section in self.enactingClause.enactingClauseSections:
             print(section.text)
+        for section in self.sections:
+            for subsection in section.subsections:
+                print("MOMENTTI: " + subsection.text)
+
+    def printSectionXMLTags(self):
+        secTags = sectionTags()
+        subTags = subsectionTags()
+        tree = ET.parse(self.path)
+        root = tree.getroot()
+        print("ID: " + self.statuteID) 
+        for section in tree.iter(secTags.get("section")):
+            for iterObj in section.iter():
+                print(iterObj)
+
+
+    def printAllSections(self):
+        print("ID: " + self.statuteID)
+        for section in self.sections:
+            if (section.heading != None):
+                if (section.identifier == None):
+                    print("\n\nEI PYKÄLÄTUNNUSTA: " + section.text)
+                elif (section.identifier != None):
+                    print("\n\n" + section.identifier + " " + section.heading + ": \n" )
+            elif (section.heading == None and section.identifier != None):
+                print(section.identifier + ": \n")
+            elif (section.identifier == None):
+                print("EI PYKÄLÄTUNNUSTA EIKÄ OTSIKKOA \n")
+
+            for subsection in section.subsections:
+                if (subsection.position != None and subsection.text != None):
+                    print(str(subsection.position) + ". mom: " + subsection.text + "\n")
+
+    def printSectionHeadings(self):
+        print(self.statuteID)
+        for section in self.sections:
+            if (section.heading != None):
+                print(section.heading + "\n")
+            elif (section.heading == None):
+                print("Pykälällä ei otsikkoa")
+
+    def printParagraphs(self):
+        for section in self.sections:
+            for subsection in section.subsections:
+                if (subsection.paragraphs != None):
+                    print("addsfdsfsadf" + str(subsection.position))
+                    for paragraph in subsection.paragraphs:
+                        assert(paragraph.isPreamble != None)
+                        if (paragraph.isPreamble == True):
+                            print("Momentin (nro: " + str(paragraph.position) + ") esipuhe: " + paragraph.text + "\n")
+                        elif (paragraph.isPreamble == False):
+                            print(str(paragraph.position) + ". kohta: " + paragraph.text + "\n")
+
 
 class Chapter:
 
@@ -176,21 +332,42 @@ class Chapter:
 
 class Section:
     
+    def __init__(self):
+        pass
+
     sectionID = None
     identifier = None
     classification = None
     heading = None
     subsections = []
+    #Iterable element tree object rooted in the current section. 
     iterableXml = None
+
+    #--------------TESTING------------------
+
+    def getTreeElements(self):
+        elements = []
+        for element in self.iterableXml.iter():
+            elements.append(element.tag)
+        return (elements)
+
 
 class Subsection:
 
+    def __init__(self):
+        pass
+
     position = None
-    paragraphs = None
+    paragraphs = []
     text = None
+    iterableXml = None
 
 class Paragraph:
 
+    def __init__(self):
+        pass
+
+    isPreamble = None
     preamble = None
     position = None 
     text = None
@@ -218,7 +395,6 @@ class Picture:
 
     pictureID = None
     text = None
-
 
 def documentTags():
     
@@ -271,7 +447,7 @@ def paragraphTags():
     paragraphPreamble = "{http://www.vn.fi/skeemat/saadoskooste/2010/04/27}MomenttiJohdantoKooste"
     text = "{http://www.vn.fi/skeemat/saadoskooste/2010/04/27}MomenttiKohtaKooste"
 
-    tagDic ={"preamble":paragraphPreamble, "text":text}
+    tagDic ={"paragraphPreamble":paragraphPreamble, "text":text, "paragraphs":paragraphs}
     return tagDic 
 
 def signaturePartTags():
@@ -342,7 +518,13 @@ def createStatute(path):
 
     return newStatute
 
+
+
+
+
+
+
 path = randomFilePath()
 stat = createStatute(path)
 stat.initStatute()
-stat.printProperties()
+stat.printAllSections()
