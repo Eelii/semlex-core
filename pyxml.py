@@ -225,7 +225,7 @@ class Statute:
 
         return paragraphLst
                          
-                         
+
     def initStatute(self):
         self.defineNumber()
         self.defineYear()       
@@ -280,8 +280,7 @@ class Statute:
             for iterObj in section.iter():
                 print(iterObj)
 
-
-    def printAllSections(self):
+    def printStatute(self):
         print("ID: " + self.statuteID)
         for section in self.sections:
             if (section.heading != None):
@@ -297,6 +296,14 @@ class Statute:
             for subsection in section.subsections:
                 if (subsection.position != None and subsection.text != None):
                     print(str(subsection.position) + ". mom: " + subsection.text + "\n")
+                elif(subsection.position != None and subsection.text == None and len(subsection.paragraphs)>0):
+                    for paragraph in subsection.paragraphs:
+                        if (paragraph.isPreamble == True):
+                            print("Johtolause: " + paragraph.preamble + "\n")
+                        elif (paragraph.isPreamble == False):
+                            print("Pos. " + str(paragraph.position) + paragraph.text +"\n")
+                        else:
+                             (print("\n\nWHAAAAAAAAAAAAAAAAAAT\n\n"))
 
     def printSectionHeadings(self):
         print(self.statuteID)
@@ -527,4 +534,4 @@ def createStatute(path):
 path = randomFilePath()
 stat = createStatute(path)
 stat.initStatute()
-stat.printAllSections()
+stat.printStatute()
